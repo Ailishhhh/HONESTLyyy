@@ -1,8 +1,11 @@
-// React is needed for JSX transform in this environment
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { Toaster } from "react-hot-toast";
+
 import { AuthProvider } from "@/contexts/AuthContext";
+
 import { Layout } from "@/components/layout/Layout";
+import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
+
 import { HomePage } from "@/pages/HomePage";
 import { ReportPage } from "@/pages/ReportPage";
 import { HistoryPage } from "@/pages/HistoryPage";
@@ -15,7 +18,8 @@ export default function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
-        {/* Toast notifications */}
+
+        {/* Toasts */}
         <Toaster
           position="top-right"
           toastOptions={{
@@ -28,25 +32,47 @@ export default function App() {
               fontSize: "13px",
             },
             success: {
-              iconTheme: { primary: "#22c55e", secondary: "#0a0a0a" },
+              iconTheme: {
+                primary: "#22c55e",
+                secondary: "#0a0a0a",
+              },
             },
             error: {
-              iconTheme: { primary: "#ef4444", secondary: "#0a0a0a" },
+              iconTheme: {
+                primary: "#ef4444",
+                secondary: "#0a0a0a",
+              },
             },
           }}
         />
 
         <Layout>
           <Routes>
+
+            {/* PUBLIC */}
             <Route path="/" element={<HomePage />} />
             <Route path="/report/:id" element={<ReportPage />} />
-            <Route path="/history" element={<HistoryPage />} />
+
+            {/* AUTH */}
             <Route path="/login" element={<LoginPage />} />
             <Route path="/signup" element={<SignupPage />} />
-            {/* Catch-all */}
+
+            {/* PROTECTED */}
+            <Route
+              path="/history"
+              element={
+                <ProtectedRoute>
+                  <HistoryPage />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* FALLBACK */}
             <Route path="*" element={<Navigate to="/" replace />} />
+
           </Routes>
         </Layout>
+
       </AuthProvider>
     </BrowserRouter>
   );

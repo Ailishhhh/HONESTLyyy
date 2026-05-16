@@ -5,9 +5,9 @@ import crypto from "crypto";
 
 import { screenshotService } from "./services/screenshotService.js";
 import { geminiService } from "./services/geminiService.js";
-import { storageService } from "./services/storageService.js";
 
 import { supabase } from "./config/supabase.js";
+import { storageService } from "./services/storageService.js";
 
 dotenv.config();
 
@@ -38,6 +38,22 @@ app.post("/analyze", async (req, res) => {
       });
     }
 
+    const authHeader = req.headers.authorization;
+    let userId: string | null = null;
+
+    // GET AUTH USER
+    if (authHeader?.startsWith("Bearer ")) {
+      const token = authHeader.replace("Bearer ", "");
+
+      const {
+        data: { user },
+      } = await supabase.auth.getUser(token);
+
+      if (user) {
+        userId = user.id;
+      }
+    }
+
     const cleanUrl = url.startsWith("http")
       ? url
       : `https://${url}`;
@@ -60,10 +76,7 @@ app.post("/analyze", async (req, res) => {
     // REPORT ID
     const reportId = crypto.randomUUID();
 
-    /* ────────────────────────────────────────────── */
-    /* UPLOAD SCREENSHOT TO STORAGE */
-    /* ────────────────────────────────────────────── */
-
+    // UPLOAD SCREENSHOT
     console.log("UPLOADING SCREENSHOT");
 
     const screenshotUrl = await storageService.uploadScreenshot(
@@ -73,16 +86,15 @@ app.post("/analyze", async (req, res) => {
 
     console.log("SCREENSHOT UPLOADED");
 
-    /* ────────────────────────────────────────────── */
-    /* SAVE TO DATABASE */
-    /* ────────────────────────────────────────────── */
-
+    // SAVE TO SUPABASE
     console.log("SAVING REPORT");
 
     const { error: dbError } = await supabase
       .from("reports")
       .insert({
         id: reportId,
+
+        user_id: userId,
 
         url: cleanUrl,
 
@@ -118,10 +130,7 @@ app.post("/analyze", async (req, res) => {
 
     console.log("REPORT SAVED");
 
-    /* ────────────────────────────────────────────── */
-    /* RETURN RESPONSE */
-    /* ────────────────────────────────────────────── */
-
+    // RETURN RESPONSE
     res.json({
       success: true,
 
@@ -133,6 +142,8 @@ app.post("/analyze", async (req, res) => {
         screenshotUrl,
 
         createdAt: new Date().toISOString(),
+
+        userId,
 
         ...analysis,
       },
@@ -205,6 +216,69 @@ app.get("/report/:id", async (req, res) => {
 
     res.status(500).json({
       error: "Failed to fetch report",
+    });
+  }
+});
+
+/* ────────────────────────────────────────────────────────────── */
+/* GET USER HISTORY */
+/* ────────────────────────────────────────────────────────────── */
+
+app.get("/api/reports", async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+
+    if (!authHeader?.startsWith("Bearer ")) {
+      return res.status(401).json({
+        error: "Unauthorized",
+      });
+    }
+
+    const token = authHeader.replace("Bearer ", "");
+
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser(token);
+
+    if (authError || !user) {
+      return res.status(401).json({
+        error: "Invalid token",
+      });
+    }
+
+    const { data, error } = await supabase
+      .from("reports")
+      .select("*")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      console.error(error);
+
+      return res.status(500).json({
+        error: "Failed to fetch reports",
+      });
+    }
+
+    const reports = data.map((report) => ({
+      id: report.id,
+      url: report.url,
+      screenshotUrl: report.screenshot_url,
+      overallScore: report.scores?.overall || 0,
+      createdAt: report.created_at,
+    }));
+
+    res.json({
+      success: true,
+      reports,
+    });
+
+  } catch (error) {
+    console.error(error);
+
+    res.status(500).json({
+      error: "Failed to fetch history",
     });
   }
 });

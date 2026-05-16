@@ -23,6 +23,36 @@ export interface AnalysisStrength {
   description: string;
 }
 
+export interface ExecutiveVerdict {
+  headline: string;
+  primaryWeakness: string;
+  primaryStrength: string;
+  estimatedBusinessImpact: "high" | "medium" | "low";
+  summary: string;
+}
+
+export interface PsychologicalProfile {
+  brandPersonality: string[];
+  emotionalTone: string;
+  userPerception: string;
+  trustLevel: "low" | "medium" | "high" | "elite";
+  summary: string;
+}
+
+export interface FirstImpression {
+  clarity: string;
+  visualImpact: string;
+  confidenceSignal: string;
+  summary: string;
+}
+
+export interface PriorityFix {
+  title: string;
+  impact: "high" | "medium" | "low";
+  description: string;
+  recommendation: string;
+}
+
 export interface TrustArchitecture {
   score: number;
   signals: string[];
@@ -78,9 +108,17 @@ export interface AnalysisReport {
   id: string;
   url: string;
   screenshotUrl: string | null;
+
   scores: AnalysisScores;
+
+  executiveVerdict: ExecutiveVerdict;
+  psychologicalProfile: PsychologicalProfile;
+  firstImpression: FirstImpression;
+  priorityFixes: PriorityFix[];
+
   issues: AnalysisIssue[];
   strengths: AnalysisStrength[];
+
   trustArchitecture: TrustArchitecture;
   typographyIntelligence: TypographyIntelligence;
   visualHierarchy: VisualHierarchy;
@@ -88,6 +126,7 @@ export interface AnalysisReport {
   ctaClarity: CTAClarity;
   cognitiveFriction: CognitiveFriction;
   conversionConfidence: ConversionConfidence;
+
   summary: string;
   createdAt: string;
   userId: string | null;
